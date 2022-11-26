@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vue Source Code</title>
+</head>
+
+<body>
+    <div id="app" style="color: red;background-color: pink;" >
+        <div style="color: red">
+            {{name}}hello{{age}}hello
+        </div>
+        <span>code</span>
+    </div>
+    <h1>实现虚拟DOM转为真实DOM</h1>
+    <div id="vnode"></div>
+    <script src="./vue.js"></script>
+    <script>
+        const vm = new Vue({
+            data() {
+                return {
+                    name: "csf",
+                    age: 18,
+                    num: {
+                        count: 1
+                    },
+                    hobby: [{b:1},'eat', 'drink', {a: 3}]
+                }
+            },
+            el: '#app'
+        })
+        vm.hobby.push({a:1})
+        vm.num = {
+            count:4
+        }
+        // console.log('vm', vm.hobby[2].a)
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,22 @@
+{
+  "name": "vue-test",
+  "version": "1.0.0",
+  "description": "1. 搭建rollup环境",
+  "main": "rollup.config.js",
+  "dependencies": {
+    "@rollup/plugin-node-resolve": "^15.0.1"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.20.2",
+    "@babel/preset-env": "^7.20.2",
+    "rollup": "^3.4.0",
+    "rollup-plugin-babel": "^4.4.0"
+  },
+  "type": "module",
+  "scripts": {
+    "dev": "rollup -cw"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
