@@ -1,5 +1,6 @@
 
 import {newArrayProto} from './array'
+import Dep from './dep'
 class Obsereve{
     constructor(data){
         // 如果是对象类型，在数组方法重写过程中造成调用栈溢出
@@ -37,11 +38,16 @@ class Obsereve{
 }
 
 export function defineReactive(target, key, value){
+    // 为每个dep增加dep
+    let dep = new Dep()
     // value可能是个对象
     // 如果是对象递归劫持
     observe(value)
     Object.defineProperty(target, key, {
         get(){
+            if(Dep.target){
+                dep.depend() // 让这个属性的DEP记住当前的watcher
+            }
             return value
         },
         set(newValue){
@@ -49,6 +55,7 @@ export function defineReactive(target, key, value){
             // 直接赋值一个对象的情况
             observe(newValue)
             value = newValue
+            dep.notify() // 更新时
         }
     })
 }

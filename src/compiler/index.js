@@ -114,6 +114,7 @@ export function cpmpileToFuntion(template) {
     let render = new Function(code)  // 字符串变为函数运行
 
     // 模板引擎实现原理 with + new Funcion
+    // console.log('render')
+    // console.log(render.toString)
     return render
-    // console.log(render.toString) [Function: anonymous]
 }

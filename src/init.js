@@ -42,7 +42,7 @@ export const initMixin = (Vue) => {
                 const render = cpmpileToFuntion(template)
                 ops.render = render
                 // render函数
-                console.log(ops.render)
+                // console.log(ops.render)
             }
         }
         // 在options内部有render

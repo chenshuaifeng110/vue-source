@@ -1,4 +1,8 @@
 import {createTextVNode, createElement} from './vdom'
+import Watcher from './observe/watcher'
+
+//_c('div',{style:{color: 'red', width: '10px'}}, _v(_s(name)+'hello'))
+
 export function mountComponent(vm, el){
     vm.$el = el
     // 1. 调用render方法产生虚拟DOM
@@ -7,16 +11,30 @@ export function mountComponent(vm, el){
    vm._update(vnode) 
     // 2. 根据虚拟DOM产生真是DOM
     // 3. 插入到el元素中
+
+    // true渲染标识
+    const updateComponent = ()=>{
+        vm._update(vm._render())
+    }
+    const watcher = new Watcher(vm, updateComponent, true)
+    console.log(watcher)
 }
+// oldVNode是#app
+// vnode 虚拟DOM
 function patch(oldVNode, vnode){
+    // console.log('patch')
+    // console.log('vnode', vnode)
     // 创建新元素
     const isRealElement = oldVNode.nodeType;
     if(isRealElement){
         const el = oldVNode;
         const parentEle = el.parentNode;
+        // 创建真实DOM
         let newEle = createEle(vnode)
+        // console.log('DOM',newEle)
         parentEle.insertBefore(newEle, el, el.nextSibling)
         parentEle.removeChild(el)
+        return   newEle
     }else{
         // diff 算法
     }
@@ -32,13 +50,16 @@ function createEle(vnode){
     } = vnode
     if(typeof tag === 'string'){
         // 标签
-        // 将真实节点和虚拟节点对应，如果虚拟节点的属性发生变化就可以直接找到真实节点
+        // 将真实标签和虚拟标签对应，如果虚拟节点的属性发生变化就可以直接找到真实节点
+        // 使用createElement的api创建真实标签
+        // console.log('tag', tag)
        vnode.el = document.createElement(tag)
+        //    console.log('el',vnode.el) 创建div div span 标签
        // 更新属性
        patchProps( vnode.el, data)
        children.forEach(child => {
         // 将真实子节点添加到父节点
-        // 递归添加
+        // 递归添加实现循环创建子节点
         vnode.el.appendChild(createEle(child))
        })
     }else{
@@ -47,8 +68,10 @@ function createEle(vnode){
     }
     return vnode.el
 }
-//_c('div',{style:{color: 'red', width: '10px'}}, _v(_s(name)+'hello'))
+// 标签 div
+// 属性 {style{color: ' red'}}
 function patchProps(el, props){
+    // console.log('patchProps',el, props)
     for (const key in props) {
         if(key === 'style'){
             for (const styleName in props.style) {
@@ -62,10 +85,13 @@ function patchProps(el, props){
 export function initLifeCycle(Vue) {
     Vue.prototype._update = function(vnode){
         //  console.log('vnode', vnode) 表达式已经解析了
-        const el = this.$el
+        // 变量重新赋值，实现了状态变换后的视图更新
+        const vm = this
+        const el = vm.$el
         // 将虚拟DOM转换为真是DOM
-        patch(el, vnode)
-        console.log(vnode, el)
+        vm.$el = patch(el, vnode)
+        // console.log('el',el)
+        // console.log('vnode',vnode)
         
     }
     Vue.prototype._render = function(){

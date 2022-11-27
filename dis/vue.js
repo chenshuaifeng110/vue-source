@@ -124,6 +124,42 @@
     };
   });
 
+  // 为每个属性增加dep
+
+  var id$1 = 0;
+  var Dep = /*#__PURE__*/function () {
+    function Dep() {
+      _classCallCheck(this, Dep);
+      this.id = id$1++; // 属性的dep收集多个watcher
+      this.subs = []; // 多个watcher
+      this.deps = []; // 用于存放多个dep 实现计算属性和组件卸载时的清理工作
+    }
+    _createClass(Dep, [{
+      key: "depend",
+      value: function depend() {
+        // Dep.target是watcher
+        // 当有两个name时候,push两个相同watcher
+        // 同时让wacher记录dep
+        // this.subs.push(Dep.target)  // 由于dep与wacher多对多关系 需要去重
+        Dep.target.addDep(this);
+      }
+    }, {
+      key: "addSub",
+      value: function addSub(watcher) {
+        this.subs.push(watcher);
+      }
+    }, {
+      key: "notify",
+      value: function notify() {
+        this.subs.forEach(function (watcher) {
+          return watcher.update();
+        });
+      }
+    }]);
+    return Dep;
+  }(); // dep与watcher关联做准备,
+  Dep.target = null;
+
   var Obsereve = /*#__PURE__*/function () {
     function Obsereve(data) {
       _classCallCheck(this, Obsereve);
@@ -171,11 +207,17 @@
     return Obsereve;
   }();
   function defineReactive(target, key, value) {
+    // 为每个dep增加dep
+    var dep = new Dep();
     // value可能是个对象
     // 如果是对象递归劫持
     observe(value);
     Object.defineProperty(target, key, {
       get: function get() {
+        if (Dep.target) {
+          dep.depend(); // 让这个属性的DEP记住当前的watcher
+        }
+
         return value;
       },
       set: function set(newValue) {
@@ -183,6 +225,7 @@
         // 直接赋值一个对象的情况
         observe(newValue);
         value = newValue;
+        dep.notify(); // 更新时
       }
     });
   }
@@ -560,8 +603,9 @@
     var render = new Function(code); // 字符串变为函数运行
 
     // 模板引擎实现原理 with + new Funcion
+    // console.log('render')
+    // console.log(render.toString)
     return render;
-    // console.log(render.toString) [Function: anonymous]
   }
 
   // _c() 
@@ -601,6 +645,130 @@
     return vnode;
   }
 
+  // 多个组件实例对应对各watcher实例
+  var id = 0;
+  var Watcher = /*#__PURE__*/function () {
+    function Watcher(vm, callback, flag) {
+      _classCallCheck(this, Watcher);
+      this.renderWatcher = flag;
+      this.id = id++;
+      this.getter = callback;
+      this.depsId = new Set();
+      this.deps = [];
+      this.get(); // 渲染方法放在最后面不然 deps为undefined
+    }
+    _createClass(Watcher, [{
+      key: "get",
+      value: function get() {
+        // dep和watcher关联
+        // Dep添加一个静态属性,指向wathcer
+        // 1. 当创建wathcer时候,把watcher挂载到Dep.target上
+        // 2. 调用_render()取值走到get
+        // this指向当前watcher target包含id 和render函数的更新方法callback
+        // 执行get取值会调用Dep中方法  收集依赖
+        // console.log(this)b
+        Dep.target = this;
+        // 开始编译渲染
+        this.getter();
+        Dep.target = null;
+      }
+    }, {
+      key: "addDep",
+      value: function addDep(dep) {
+        this.deps;
+        // 一个组件有多个属性 重复属性不用记录
+        var id = dep.id;
+        // 去重后再push
+        if (!this.depsId.has(id)) {
+          this.depsId.add(id);
+          this.deps.push(dep);
+          dep.addSub(this); // 让dep记住wathcer
+        }
+      }
+    }, {
+      key: "update",
+      value: function update() {
+        // 异步更新 当多个属性同时更新时,只更新一次
+        // 原理放在一个定时器中,主执行栈同步代码执行完毕,调用定时器执行一次
+        // 节省性能
+        queueWatcher(this);
+
+        // 更新渲染 重新生成虚拟dom
+        // this.get()
+      }
+    }, {
+      key: "run",
+      value: function run() {
+        console.log('update');
+        this.get();
+      }
+
+      //  给模板中的属性增加一个收集器 dep, 收集wathcer
+      // 一个组件中有多个属性, n个属性对应n个watcher,一个dep(props在多个组件使用)对应多个watcher
+    }]);
+    return Watcher;
+  }();
+  var queue = [];
+  var has = {}; // 去重
+  var pending = false;
+  function queueWatcher(watcher) {
+    var id = watcher.id;
+    if (!has[id]) {
+      queue.push(watcher);
+      has[id] = true;
+      // 多个组件更新,也只执行一次
+      console.log(queue);
+      if (!pending) {
+        setTimeout(flushSchedulerQueue, 0);
+        pending = true;
+      }
+    }
+  }
+  function flushSchedulerQueue() {
+    var flushQueue = queue.splice(0);
+    flushQueue.forEach(function (q) {
+      return q.run();
+    }); // 再刷新的过程中如果有新的watcher重新放到队列中 所以对queue拷贝操作     
+    queue = [];
+    has = {};
+    pending = false;
+  }
+
+  // vm.age = 4
+  // vm.name = 'abc'
+  // console.log(app.innerHTML) <div style="color: red;">csf18hellocsfhello</div><span>code</span 获取失败
+  // 因为更新是异步跟新的 获取html是同步
+  // 用户输入的情况 1. 同步更新 2. 定时器 3. async await
+  // 微任务优先执行
+  // Promise.resolve().then(() =>{
+  //     console.log(app.innerHTML) // name= sfc
+  // })
+
+  // 所以nextTick不是创建异步任务, 而是将创建任务队列,按照进栈顺序执行
+  var callbacks = [];
+  var waiting = false;
+  function nextTick(callback) {
+    callbacks.push(callback);
+    if (!waiting) {
+      Promise.resolve().then(flushCallbacks);
+      // setTimeout(() =>{
+      //     flushCallbacks()
+      // },)
+    }
+
+    waiting = true;
+  }
+  function flushCallbacks() {
+    var cbs = callbacks.slice(0); // 拷贝数组
+    waiting = true;
+    callbacks = [];
+    cbs.forEach(function (cb) {
+      return cb();
+    });
+  }
+
+  //_c('div',{style:{color: 'red', width: '10px'}}, _v(_s(name)+'hello'))
+
   function mountComponent(vm, el) {
     vm.$el = el;
     // 1. 调用render方法产生虚拟DOM
@@ -609,17 +777,30 @@
     vm._update(vnode);
     // 2. 根据虚拟DOM产生真是DOM
     // 3. 插入到el元素中
-  }
 
+    // true渲染标识
+    var updateComponent = function updateComponent() {
+      vm._update(vm._render());
+    };
+    var watcher = new Watcher(vm, updateComponent, true);
+    console.log(watcher);
+  }
+  // oldVNode是#app
+  // vnode 虚拟DOM
   function patch(oldVNode, vnode) {
+    // console.log('patch')
+    // console.log('vnode', vnode)
     // 创建新元素
     var isRealElement = oldVNode.nodeType;
     if (isRealElement) {
       var el = oldVNode;
       var parentEle = el.parentNode;
+      // 创建真实DOM
       var newEle = createEle(vnode);
+      // console.log('DOM',newEle)
       parentEle.insertBefore(newEle, el, el.nextSibling);
       parentEle.removeChild(el);
+      return newEle;
     }
   }
   function createEle(vnode) {
@@ -631,13 +812,16 @@
       text = vnode.text;
     if (typeof tag === 'string') {
       // 标签
-      // 将真实节点和虚拟节点对应，如果虚拟节点的属性发生变化就可以直接找到真实节点
+      // 将真实标签和虚拟标签对应，如果虚拟节点的属性发生变化就可以直接找到真实节点
+      // 使用createElement的api创建真实标签
+      // console.log('tag', tag)
       vnode.el = document.createElement(tag);
+      //    console.log('el',vnode.el) 创建div div span 标签
       // 更新属性
       patchProps(vnode.el, data);
       children.forEach(function (child) {
         // 将真实子节点添加到父节点
-        // 递归添加
+        // 递归添加实现循环创建子节点
         vnode.el.appendChild(createEle(child));
       });
     } else {
@@ -646,8 +830,10 @@
     }
     return vnode.el;
   }
-  //_c('div',{style:{color: 'red', width: '10px'}}, _v(_s(name)+'hello'))
+  // 标签 div
+  // 属性 {style{color: ' red'}}
   function patchProps(el, props) {
+    // console.log('patchProps',el, props)
     for (var key in props) {
       if (key === 'style') {
         for (var styleName in props.style) {
@@ -661,11 +847,15 @@
   function initLifeCycle(Vue) {
     Vue.prototype._update = function (vnode) {
       //  console.log('vnode', vnode) 表达式已经解析了
-      var el = this.$el;
+      // 变量重新赋值，实现了状态变换后的视图更新
+      var vm = this;
+      var el = vm.$el;
       // 将虚拟DOM转换为真是DOM
-      patch(el, vnode);
-      console.log(vnode, el);
+      vm.$el = patch(el, vnode);
+      // console.log('el',el)
+      // console.log('vnode',vnode)
     };
+
     Vue.prototype._render = function () {
       // 渲染时会从实例中取值，这样就可以将属性和视图绑定
       // 就是说已经解析出插值表达式
@@ -725,7 +915,7 @@
           var render = cpmpileToFuntion(template);
           ops.render = render;
           // render函数
-          console.log(ops.render);
+          // console.log(ops.render)
         }
       }
       // 在options内部有render
@@ -742,6 +932,7 @@
     // 调用实例_init初始化
     this._init(options);
   }
+  Vue.prototype.$nextTick = nextTick;
   initMixin(Vue); // 为Vue实例扩展init方法
   initLifeCycle(Vue);
 

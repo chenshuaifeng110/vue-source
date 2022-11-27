@@ -11,7 +11,7 @@
 <body>
     <div id="app" style="color: red;background-color: pink;" >
         <div style="color: red">
-            {{name}}hello{{age}}hello
+            {{name}}hello{{age}}hello{{name}}
         </div>
         <span>code</span>
     </div>
@@ -33,10 +33,26 @@
             el: '#app'
         })
         vm.hobby.push({a:1})
-        vm.num = {
-            count:4
-        }
+        vm.age = 4
+        vm.name = 'abc'
+        // 观察者模式
+        // setTimeout(()=>{
+        //     // 状态变化重新渲染
+        //     vm.name = 'sfc'
+        //     vm.age = 3
+        // }, 1000)
         // console.log('vm', vm.hobby[2].a)
+
+        // console.log(app.innerHTML) <div style="color: red;">csf18hellocsfhello</div><span>code</span 获取失败
+            // 因为更新是异步跟新的 获取html是同步
+            // 微任务
+            // Promise.resolve().then(() =>{
+            //     console.log(app.innerHTML) // name= sfc
+            // })
+
+            vm.$nextTick(() => {
+                console.log(app.innerHTML)
+            })
     </script>
 </body>
 
