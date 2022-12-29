@@ -10,7 +10,7 @@ const requiredPrompts = [
         message: 'please input repo Chinese Name ?(e.g. `智慧水利`)',
     },
 ];
-// 需要修改字段所在文件
+// 需要修改字段所在文
 const effectFiles = [
     `readme.md`,
     `package.json`,
