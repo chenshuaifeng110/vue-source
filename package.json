@@ -1,5 +1,7 @@
 {
   "name": "vue-test",
+  "repoNameZh": "vue-test",
+  "repoNameEn": "vue-test",
   "version": "1.0.0",
   "description": "1. 搭建rollup环境",
   "main": "rollup.config.js",

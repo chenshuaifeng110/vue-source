@@ -22,5 +22,8 @@
 3. render函数的生成
 4. 虚拟DOM转化为真实DOM
 
+"repoNameZh": "vue-test",
+"repoNameEn": "vue-test",
+
 
 
